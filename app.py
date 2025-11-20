@@ -24,7 +24,11 @@ def register():
         
         # Gera o QR Code após o registro do usuário
         img = qrcode.make(unique_id)
-        qr_path = f"/static/qrcodes{unique_id}.png"
+        qr_folder = os.path.join("static", "qrcodes")
+        os.makedirs(qr_folder, exist_ok=True)
+        
+        qr_filename = f"{unique_id}.png"
+        qr_path = os.path.join(qr_folder, qr_filename)
         img.save(qr_path)
         
         # Salvar no banco de dados
@@ -40,7 +44,7 @@ def register():
         db.commit()
         db.close()
         
-        return render_template("success.html", qr_path = qr_path, name = name)
+        return render_template("success.html", qr_filename=qr_filename, name=name)
     
     return render_template("register.html")
 
