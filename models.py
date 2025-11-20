@@ -12,6 +12,8 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    unique_id = Column(String, unique=True, index=True, nullable=False)
+    qr_code_path = Column(String, nullable=False)
     last_checkin = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
