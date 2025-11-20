@@ -38,7 +38,7 @@ def register():
             name = name,
             email = email,
             unique_id = unique_id,
-            qr_path = qr_path
+            qr_code_path = f"qrcodes/{qr_filename}"
         )
         db.add(new_user)
         db.commit()
