@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response
 from models import init_db, SessionLocal, User
 from auth import hash_password, verify_password, create_token, decode_token
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import qrcode
 import os
+from functools import wraps
 
 app = Flask(__name__)
 init_db()
@@ -53,20 +54,35 @@ def register():
 
     return render_template("register.html")
 
+    # Pega usuário autenticado com token JWT ou Bearer
+def get_current_user():
+    auth = request.headers.get("Authorization", "")
+    token = None
+    if auth.startswith("Bearer "):
+        token = auth.split(" ", 1)[1].strip()
         
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    data = request.json
-    email = data.get("email")
-    password = data.get("password")
-    db = SessionLocal()
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(user.password_hash, password):
-        db.close()
-        return jsonify({"error": "Credenciais inválidas"}), 401
-    token = create_token(user.id)
-    db.close()
-    return jsonify({"token": token})
+    # Cookie Callback
+    if not token:
+        token = request.cookie.get("access_token")
+        
+    if not token:
+        return None
+    
+    user_id = decode_token(token)
+    return None
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    db = SessionLocal()
+    user = db.query(User).filter(User_id == user_id).first()
+    db.close()
+    return user
+
+# Decorator para rotas protegidas
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for("login")) if request.accep_mimetypes.accept_html else jsonify({"Error": "Unauthorized"}), 401
+        return f(user, *args, **kwargs)
+    return wrapper
+
