@@ -86,3 +86,42 @@ def login_required(f):
         return f(user, *args, **kwargs)
     return wrapper
 
+# Rota de login (GET mostra form, POST autentica)
+@app.route('login', methods=["GET", "POST"])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+    
+    # POST: Aceita login pelo Form ou em JSON por API
+    if request.content_type and "application/json" in request.content_type:
+        data = request.json or {}
+        email = data.get("email")
+        password = data.get("password")
+    else:
+        email = request.form.get("email")
+        password = request.form.get("password")
+        
+        if not email or not password:
+            return jsonify({"error: missing credentials"}), 400
+        
+        db = SessionLocal()
+        user = db.query(User).filter(User.email == email).first()
+        db.close()
+        
+        if not user or not verify_password(user.password_hash, password):
+            return jsonify({"Error": "invalid_credentials"}), 401
+        
+        token = create_token(user.id)
+        
+        # Se for form HTML, é definido cookie e redireciona para /me (ou Dashboard)
+        if not(request.content_type and "application/json" in request.content_type):
+            resp = make_response(redirect(url_for(me_page)))
+            
+            # Cookie seguro em produção
+            resp.set_cookie("access_token", token, httponly=True, samesite="Lax")
+            return resp
+        
+        # Se for chamada API (JSON), retorna ao token no body
+        return jsonify({"token": token})
+    
+    
