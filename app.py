@@ -124,4 +124,25 @@ def login():
         # Se for chamada API (JSON), retorna ao token no body
         return jsonify({"token": token})
     
+# Endpoint protegido que retorna dados do usuário (JSON)
+@app.route("/api/me", methods=["GET"])
+def me_api():
+    user = get_current_user()
+    if not user:
+        return jsonify({"Error": "Unauthorized"}), 401
+    return jsonify({
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "unique_id": user.unique_id,
+        "qr_code_path": user.qr_code_path,
+        "last_checkin": user.last_checkin.isoformat() if user.last_checkin else None,
+        "created_at": user.created_at.isoformart() if user.created_at else None
+    })
     
+# Página simples (demo) que mostra o perfil do usuário
+@app.route("/me")
+@login_required
+def me_page(current_user):
+    # current user vem do Decorator
+    return render_template("me.html", user=current_user)
