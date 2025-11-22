@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Meu Perfil - SmartPass</title>
+</head>
+<body>
+  <h1>Olá, {{ user.name }}</h1>
+  <p><strong>E-mail:</strong> {{ user.email }}</p>
+  <p><strong>ID único:</strong> {{ user.unique_id }}</p>
+  <p><strong>Último check-in:</strong> {{ user.last_checkin }}</p>
+  <p><img src="{{ url_for('static', filename=user.qr_code_path) }}" width="200"></p>
+
+  <form method="POST" action="/logout">
+    <button type="submit">Sair</button>
+  </form>
+</body>
+</html>
