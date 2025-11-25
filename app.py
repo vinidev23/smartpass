@@ -87,7 +87,7 @@ def login_required(f):
     return wrapper
 
 # Rota de login (GET mostra form, POST autentica)
-@app.route('login', methods=["GET", "POST"])
+@app.route('/login', methods=["GET", "POST"])
 def login():
     if request.method == 'GET':
         return render_template('login.html')
@@ -139,6 +139,28 @@ def me_api():
         "last_checkin": user.last_checkin.isoformat() if user.last_checkin else None,
         "created_at": user.created_at.isoformart() if user.created_at else None
     })
+    
+    def auth_required(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            token = request.cookies.get("token")
+            
+            if not token:
+                return redirect(url_for("login"))
+            
+            user_id = decode_token(token)
+            if not user_id:
+                return redirect(url_for("login"))
+            
+            db = SessionLocal()
+            user = db.query(User).filter(User_id == user_id).first()
+            db.close()
+            
+            if not user:
+                return redirect(url_for("login"))
+            
+            return f(user, *args, **kwargs)
+        return wrapper
     
 # Página simples (demo) que mostra o perfil do usuário
 @app.route("/me")
