@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>SmartPass - Painel</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            width: 400px;
+            border-radius: 12px;
+            margin: auto;
+            box-shadow: 0 0 10px #00000033;
+        }
+        img {
+            width: 200px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Bem-vindo, {{ user.name }}!</h2>
+
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        <p><strong>ID Único:</strong> {{ user.unique_id }}</p>
+        <p><strong>Último Check-in:</strong> 
+            {% if user.last_checkin %}
+                {{ user.last_checkin }}
+            {% else %}
+                Nunca
+            {% endif %}
+        </p>
+
+        <h3>Seu QR Code</h3>
+        <img src="/static/{{ user.qr_code_path }}" alt="QR Code">
+
+        <br><br>
+        <a href="/generate_qr" style="color: blue;">Gerar Novo QR Code</a>
+    </div>
+</body>
+</html>

@@ -168,3 +168,8 @@ def me_api():
 def me_page(current_user):
     # current user vem do Decorator
     return render_template("me.html", user=current_user)
+
+@app.route("/dashboard")
+@login_required
+def dashboard(user):
+    return render_template("dashboard.html", user=user)
