@@ -160,6 +160,36 @@ def me_page(current_user):
 def dashboard(user):
     return render_template("dashboard.html", user=user)
 
+@app.route("api/checkin", methods=["POST"])
+@login_required
+def checkin(current_user):
+    data = request.json
+    if not data or "unique_id" not in data:
+        return jsonify({"error:" "unique_id_required"}), 400
+    
+    unique_id = data["unique_id"]
+    
+    db = SessionLocal()
+    scanned_user = db.query(User).filter(User.unique_id == unique_id).first()
+    
+    if not scanned_user:
+        db.close()
+        return jsonify({"error:" "user_not_found"}), 404
+    
+    # Atualiza o check-in
+    scanned_user.last_checkin = datetime.utcnow()
+    db.commit()
+    db.close()
+    
+    return jsonify({
+        "name": scanned_user.name,
+        "email": scanned_user.email,
+        "unique_id": scanned_user.unique_id,
+        "qr_code_path": scanned_user.qr_code_path,
+        "last_checkin": scanned_user.last_checkin.isoformat(),
+        "status": "Acesso Autorizado"
+    })
+
 # INICIAR SERVIDOR
 if __name__ == "__main__":
     app.run(debug=True)
