@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response
 from models import init_db, SessionLocal, User
 from auth import hash_password, verify_password, create_token, decode_token
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import uuid
 import qrcode
 import os
@@ -160,7 +160,7 @@ def me_page(current_user):
 def dashboard(user):
     return render_template("dashboard.html", user=user)
 
-@app.route("api/checkin", methods=["POST"])
+@app.route("/api/checkin", methods=["POST"])
 @login_required
 def checkin(current_user):
     data = request.json
@@ -189,6 +189,9 @@ def checkin(current_user):
         "last_checkin": scanned_user.last_checkin.isoformat(),
         "status": "Acesso Autorizado"
     })
+    
+    db.close()
+    return jsonify(response)
 
 # INICIAR SERVIDOR
 if __name__ == "__main__":
