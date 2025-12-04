@@ -193,6 +193,35 @@ def checkin(current_user):
     db.close()
     return jsonify(response)
 
+@app.route("/api/checkin/<uid>", methods=["GET"])
+def api_checkin(uid):
+    db = SessionLocal()
+    user = db.query(User).filter(User.unique_id == uid).first()
+    
+    if not user:
+        db.close()
+        return jsonify({"error": "Usuário não encontrado"}), 400
+    
+    # Registrar no log
+    log = CheckLog(user_id=user.id, action="IN")
+    db.add(log)
+    
+    # Atualizar último check-in
+    user.last_checkin = datetime.utcnow()
+    
+    db.commit()
+    db.close()
+    
+    return jsonify({
+        "status": "success",
+        "message": f"Check-in efetuado para {user.name}",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "unique_id": user.unique_id,
+        }
+    })
+
 # INICIAR SERVIDOR
 if __name__ == "__main__":
     app.run(debug=True)
