@@ -157,7 +157,7 @@ def me_page(current_user):
 # DASHBOARD WEB
 @app.route("/dashboard")
 @login_required
-def dashboard(user):
+def dashboard(current_user):
     return render_template("dashboard.html", user=user)
 
 @app.route("/api/checkin", methods=["POST"])
@@ -221,7 +221,33 @@ def api_checkin(uid):
             "unique_id": user.unique_id,
         }
     })
+    
+@app.route("/api/checkout/<uid>", methods=["GET"])
+def api_checkout(uid):
+    db = SessionLocal()
+    user = db.query(User).filter(User.unique_id == uid).first()
 
+    if not user:
+        db.close()
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    log = CheckLog(user_id=user.id, action="OUT")
+    db.add(log)
+
+    db.commit()
+    db.close()
+
+    return jsonify({
+        "status": "success",
+        "message": f"Check-out efetuado para {user.name}",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "unique_id": user.unique_id
+        }
+    })
+    
+    
 # INICIAR SERVIDOR
 if __name__ == "__main__":
     app.run(debug=True)

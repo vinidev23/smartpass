@@ -17,7 +17,7 @@ class User(Base):
     last_checkin = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
-    logs = relationship("Checklog", back_populates="user")
+    logs = relationship("CheckLog", back_populates="user")
     
 class CheckLog(Base):
      __tablename__ = "check_logs"
