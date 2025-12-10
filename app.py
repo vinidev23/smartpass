@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response
-from models import init_db, SessionLocal, User
+from models import init_db, SessionLocal, User, CheckLog
 from auth import hash_password, verify_password, create_token, decode_token
 from datetime import datetime, timedelta, timezone
 import uuid
@@ -98,37 +98,39 @@ def register():
 def login():
     if request.method == "GET":
         return render_template("login.html")
-
-    # POST -> via JSON (API)
-    if request.content_type and "application/json" in request.content_type:
+    
+    is_json = request.content_type and "application/json" in request.content_type
+    
+    if is_json:
         data = request.json or {}
         email = data.get("email")
         password = data.get("password")
     else:
-        # POST -> via Form (HTML)
         email = request.form.get("email")
         password = request.form.get("password")
-
+        
     if not email or not password:
-        return jsonify({"error": "missing_credentials"}), 400
+        if is_json:
+            return jsonify({"error": "missing_credentials"}), 400
+        return render_template("login.html", error="Preencha todos os campos!")
 
     db = SessionLocal()
     user = db.query(User).filter(User.email == email).first()
     db.close()
 
     if not user or not verify_password(user.password_hash, password):
-        return jsonify({"error": "invalid_credentials"}), 401
-
+        if is_json:
+            return jsonify({"error": "invalid_credentials"}), 401
+        return render_template("login.html", error="Email ou senha inválidos!")
+    
     token = create_token(user.id)
-
-    # Caso seja login por FORM HTML, gera cookie
-    if not (request.content_type and "application/json" in request.content_type):
-        resp = make_response(redirect(url_for("me_page")))
-        resp.set_cookie("access_token", token, httponly=True, samesite="Lax")
-        return resp
-
-    # Caso seja API JSON
-    return jsonify({"token": token})
+    
+    if is_json:
+        return jsonify({"token": token})
+    
+    resp = make_response(redirect(url_for("me_page")))
+    resp.set_cookie("access_token", token, httponly=True, samesite="None", secure=False)
+    return resp
 
 # API - Dados do usuário autenticado
 @app.route("/api/me", methods=["GET"])
@@ -158,14 +160,14 @@ def me_page(current_user):
 @app.route("/dashboard")
 @login_required
 def dashboard(current_user):
-    return render_template("dashboard.html", user=user)
+    return render_template("dashboard.html", user=current_user)
 
 @app.route("/api/checkin", methods=["POST"])
 @login_required
 def checkin(current_user):
     data = request.json
     if not data or "unique_id" not in data:
-        return jsonify({"error:" "unique_id_required"}), 400
+        return jsonify({"error": "unique_id_required"}), 400
     
     unique_id = data["unique_id"]
     
@@ -174,7 +176,7 @@ def checkin(current_user):
     
     if not scanned_user:
         db.close()
-        return jsonify({"error:" "user_not_found"}), 404
+        return jsonify({"error": "user_not_found"}), 404
     
     # Atualiza o check-in
     scanned_user.last_checkin = datetime.utcnow()
