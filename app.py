@@ -191,9 +191,6 @@ def checkin(current_user):
         "last_checkin": scanned_user.last_checkin.isoformat(),
         "status": "Acesso Autorizado"
     })
-    
-    db.close()
-    return jsonify(response)
 
 @app.route("/api/checkin/<uid>", methods=["GET"])
 def api_checkin(uid):
@@ -248,6 +245,12 @@ def api_checkout(uid):
             "unique_id": user.unique_id
         }
     })
+    
+@app.route("/logout", methods=["POST"])
+def logout():
+    resp = make_response(redirect(url_for("login")))
+    resp.delete_cookie("access_token")
+    return resp
     
     
 # INICIAR SERVIDOR

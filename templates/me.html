@@ -1,18 +1,113 @@
 <!doctype html>
-<html>
+<html lang="pt-br">
 <head>
   <meta charset="utf-8">
   <title>Meu Perfil - SmartPass</title>
-</head>
-<body>
-  <h1>Olá, {{ user.name }}</h1>
-  <p><strong>E-mail:</strong> {{ user.email }}</p>
-  <p><strong>ID único:</strong> {{ user.unique_id }}</p>
-  <p><strong>Último check-in:</strong> {{ user.last_checkin }}</p>
-  <p><img src="{{ url_for('static', filename=user.qr_code_path) }}" width="200"></p>
 
-  <form method="POST" action="/logout">
-    <button type="submit">Sair</button>
-  </form>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f4f6f8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 24px;
+      color: #222;
+    }
+
+    .info {
+      text-align: left;
+      margin-top: 20px;
+    }
+
+    .info p {
+      margin: 8px 0;
+      color: #444;
+      font-size: 14px;
+    }
+
+    .info strong {
+      color: #000;
+    }
+
+    .qr {
+      margin: 25px 0;
+    }
+
+    .qr img {
+      width: 200px;
+      height: auto;
+    }
+
+    form {
+      margin-top: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      background: #d32f2f;
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #b71c1c;
+    }
+
+    .footer {
+      margin-top: 15px;
+      font-size: 12px;
+      color: #888;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h1>Olá, {{ user.name }}</h1>
+
+    <div class="info">
+      <p><strong>E-mail:</strong> {{ user.email }}</p>
+      <p><strong>ID único:</strong> {{ user.unique_id }}</p>
+      <p><strong>Último check-in:</strong> {{ user.last_checkin or "—" }}</p>
+    </div>
+
+    <div class="qr">
+      <img src="{{ url_for('static', filename=user.qr_code_path) }}" alt="QR Code">
+    </div>
+
+    <form method="POST" action="/logout">
+      <button type="submit">Sair</button>
+    </form>
+
+    <div class="footer">
+      SmartPass © 2025
+    </div>
+  </div>
 </body>
 </html>
