@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response
+from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response, g
 from models import init_db, SessionLocal, User, CheckLog
 from auth import hash_password, verify_password, create_token, decode_token
 from datetime import datetime, timedelta, timezone
@@ -41,9 +41,9 @@ def login_required(f):
     def wrapper(*args, **kwargs):
         user = get_current_user()
         if not user:
-            if request.accept_mimetypes.accept_html:
                 return redirect(url_for("login"))
-            return jsonify({"error": "Unauthorized"}), 401
+            
+            g.current_user = user
 
         return f(user, *args, **kwargs)
     return wrapper
@@ -129,7 +129,7 @@ def login():
         return jsonify({"token": token})
     
     resp = make_response(redirect(url_for("me_page")))
-    resp.set_cookie("access_token", token, httponly=True, samesite="None", secure=False)
+    resp.set_cookie("access_token", token, httponly=True, samesite="Lax")
     return resp
 
 # API - Dados do usuário autenticado
