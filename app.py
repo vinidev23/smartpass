@@ -1,32 +1,22 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for, make_response, g
+from flask import (
+    Flask, request, jsonify, render_template,
+    redirect, url_for, session
+)
 from models import init_db, SessionLocal, User, CheckLog
-from auth import hash_password, verify_password, create_token, decode_token
-from datetime import datetime, timedelta, timezone
+from auth import hash_password, verify_password
+from datetime import datetime
 import uuid
 import qrcode
 import os
 from functools import wraps
 
 app = Flask(__name__)
+app.secret_key = "smartpass-secret-key"
+
 init_db()
 
-# Obter usuário autenticado
 def get_current_user():
-    # Bearer token (API)
-    auth = request.headers.get("Authorization", "")
-    token = None
-
-    if auth.startswith("Bearer "):
-        token = auth.split(" ", 1)[1].strip()
-
-    # Cookie (web)
-    if not token:
-        token = request.cookies.get("access_token")
-
-    if not token:
-        return None
-
-    user_id = decode_token(token)
+    user_id = session.get("user_id")
     if not user_id:
         return None
 
@@ -35,21 +25,16 @@ def get_current_user():
     db.close()
     return user
 
-# Rota protegida
+
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         user = get_current_user()
         if not user:
-                return redirect(url_for("login"))
-            
-            g.current_user = user
-
+            return redirect(url_for("login"))
         return f(user, *args, **kwargs)
     return wrapper
 
-
-# ROTA DE REGISTRO
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -57,16 +42,13 @@ def register():
         email = request.form.get("email")
         password = request.form.get("password")
 
+
         if not name or not email or not password:
             return "Preencha todos os campos!", 400
 
-        # Hash da senha
         password_hash = hash_password(password)
-
-        # Gerar ID único
         unique_id = str(uuid.uuid4())
 
-        # Criar QR Code
         qr_folder = os.path.join("static", "qrcodes")
         os.makedirs(qr_folder, exist_ok=True)
 
@@ -75,7 +57,6 @@ def register():
         img = qrcode.make(unique_id)
         img.save(qr_path)
 
-        # Salvar usuário
         db = SessionLocal()
         new_user = User(
             name=name,
@@ -89,29 +70,19 @@ def register():
         db.commit()
         db.close()
 
-        return render_template("success.html", qr_filename=qr_filename, name=name)
+        return render_template("success.html", name=name)
 
     return render_template("register.html")
 
-# LOGIN
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
         return render_template("login.html")
-    
-    is_json = request.content_type and "application/json" in request.content_type
-    
-    if is_json:
-        data = request.json or {}
-        email = data.get("email")
-        password = data.get("password")
-    else:
-        email = request.form.get("email")
-        password = request.form.get("password")
-        
+
+    email = request.form.get("email")
+    password = request.form.get("password")
+
     if not email or not password:
-        if is_json:
-            return jsonify({"error": "missing_credentials"}), 400
         return render_template("login.html", error="Preencha todos os campos!")
 
     db = SessionLocal()
@@ -119,44 +90,18 @@ def login():
     db.close()
 
     if not user or not verify_password(user.password_hash, password):
-        if is_json:
-            return jsonify({"error": "invalid_credentials"}), 401
         return render_template("login.html", error="Email ou senha inválidos!")
-    
-    token = create_token(user.id)
-    
-    if is_json:
-        return jsonify({"token": token})
-    
-    resp = make_response(redirect(url_for("me_page")))
-    resp.set_cookie("access_token", token, httponly=True, samesite="Lax")
-    return resp
 
-# API - Dados do usuário autenticado
-@app.route("/api/me", methods=["GET"])
-def me_api():
-    user = get_current_user()
-    if not user:
-        return jsonify({"error": "Unauthorized"}), 401
+    # ✅ LOGIN OK → SESSION
+    session["user_id"] = user.id
 
-    return jsonify({
-        "id": user.id,
-        "name": user.name,
-        "email": user.email,
-        "unique_id": user.unique_id,
-        "qr_code_path": user.qr_code_path,
-        "last_checkin": user.last_checkin.isoformat() if user.last_checkin else None,
-        "created_at": user.created_at.isoformat() if user.created_at else None
-    })
+    return redirect(url_for("me_page"))
 
-
-# PÁGINA /me/web
 @app.route("/me")
 @login_required
 def me_page(current_user):
     return render_template("me.html", user=current_user)
 
-# DASHBOARD WEB
 @app.route("/dashboard")
 @login_required
 def dashboard(current_user):
@@ -168,91 +113,32 @@ def checkin(current_user):
     data = request.json
     if not data or "unique_id" not in data:
         return jsonify({"error": "unique_id_required"}), 400
-    
-    unique_id = data["unique_id"]
-    
+
     db = SessionLocal()
-    scanned_user = db.query(User).filter(User.unique_id == unique_id).first()
-    
+    scanned_user = db.query(User).filter(
+        User.unique_id == data["unique_id"]
+    ).first()
+
     if not scanned_user:
         db.close()
         return jsonify({"error": "user_not_found"}), 404
-    
-    # Atualiza o check-in
+
     scanned_user.last_checkin = datetime.utcnow()
     db.commit()
     db.close()
-    
+
     return jsonify({
+        "status": "Acesso Autorizado",
         "name": scanned_user.name,
         "email": scanned_user.email,
         "unique_id": scanned_user.unique_id,
-        "qr_code_path": scanned_user.qr_code_path,
-        "last_checkin": scanned_user.last_checkin.isoformat(),
-        "status": "Acesso Autorizado"
+        "last_checkin": scanned_user.last_checkin.isoformat()
     })
 
-@app.route("/api/checkin/<uid>", methods=["GET"])
-def api_checkin(uid):
-    db = SessionLocal()
-    user = db.query(User).filter(User.unique_id == uid).first()
-    
-    if not user:
-        db.close()
-        return jsonify({"error": "Usuário não encontrado"}), 400
-    
-    # Registrar no log
-    log = CheckLog(user_id=user.id, action="IN")
-    db.add(log)
-    
-    # Atualizar último check-in
-    user.last_checkin = datetime.utcnow()
-    
-    db.commit()
-    db.close()
-    
-    return jsonify({
-        "status": "success",
-        "message": f"Check-in efetuado para {user.name}",
-        "user": {
-            "id": user.id,
-            "name": user.name,
-            "unique_id": user.unique_id,
-        }
-    })
-    
-@app.route("/api/checkout/<uid>", methods=["GET"])
-def api_checkout(uid):
-    db = SessionLocal()
-    user = db.query(User).filter(User.unique_id == uid).first()
-
-    if not user:
-        db.close()
-        return jsonify({"error": "Usuário não encontrado"}), 404
-
-    log = CheckLog(user_id=user.id, action="OUT")
-    db.add(log)
-
-    db.commit()
-    db.close()
-
-    return jsonify({
-        "status": "success",
-        "message": f"Check-out efetuado para {user.name}",
-        "user": {
-            "id": user.id,
-            "name": user.name,
-            "unique_id": user.unique_id
-        }
-    })
-    
 @app.route("/logout", methods=["POST"])
 def logout():
-    resp = make_response(redirect(url_for("login")))
-    resp.delete_cookie("access_token")
-    return resp
-    
-    
-# INICIAR SERVIDOR
+    session.clear()
+    return redirect(url_for("login"))
+
 if __name__ == "__main__":
     app.run(debug=True)
