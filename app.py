@@ -9,6 +9,7 @@ import uuid
 import qrcode
 import os
 from functools import wraps
+from email_service import send_welcome_email
 
 app = Flask(__name__)
 app.secret_key = "smartpass-secret-key"
@@ -69,6 +70,13 @@ def register():
         db.add(new_user)
         db.commit()
         db.close()
+        
+        send_welcome_email(
+            to_email=email,
+            name=name,
+            unique_id=unique_id,
+            qr_path=qr_path
+        )
 
         return render_template("success.html", name=name)
 
