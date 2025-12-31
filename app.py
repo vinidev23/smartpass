@@ -78,7 +78,7 @@ def register():
             qr_path=qr_path
         )
 
-        return render_template("success.html", name=name)
+        return render_template("success.html", name=name, qr_filename=qr_filename)
 
     return render_template("register.html")
 
@@ -100,7 +100,6 @@ def login():
     if not user or not verify_password(user.password_hash, password):
         return render_template("login.html", error="Email ou senha inválidos!")
 
-    # ✅ LOGIN OK → SESSION
     session["user_id"] = user.id
 
     return redirect(url_for("me_page"))

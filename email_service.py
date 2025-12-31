@@ -81,7 +81,7 @@ def send_welcome_email(to_email, name, unique_id, qr_path):
         )
         
     with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-        server.startls()
+        server.starttls()
         server.login(EMAIL_SENDER, EMAIL_PASSWORD)
         server.send_message(msg)
     
