@@ -85,7 +85,7 @@ def register():
         except Exception as e:
             print("Erro ao enviar email:", e)
 
-        return render_template("success.html", name=name, qr_filename=qr_filename)
+        return render_template("login.html")
 
     return render_template("register.html")
 
