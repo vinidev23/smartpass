@@ -1,7 +1,12 @@
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from datetime import datetime, timedelta, timezone
-from config import JWT_SECRET
+import os
+
+JWT_SECRET = os.getenv("JWT_SECRET")
+
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET não definido nas variáveis de ambiente")
 
 def hash_password(password: str):
     return generate_password_hash(password)
