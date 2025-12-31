@@ -75,12 +75,15 @@ def register():
         db.commit()
         db.close()
         
-        send_welcome_email(
-            to_email=email,
-            name=name,
-            unique_id=unique_id,
-            qr_path=qr_path
-        )
+        try:
+            send_welcome_email(
+                to_email=email,
+                name=name,
+                unique_id=unique_id,
+                qr_path=qr_path
+            )
+        except Exception as e:
+            print("Erro ao enviar email:", e)
 
         return render_template("success.html", name=name, qr_filename=qr_filename)
 
