@@ -16,6 +16,10 @@ app.secret_key = "smartpass-secret-key"
 
 init_db()
 
+@app.route("/")
+def index():
+    return redirect(url_for("register"))
+
 def get_current_user():
     user_id = session.get("user_id")
     if not user_id:
